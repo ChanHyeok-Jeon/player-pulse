@@ -13,6 +13,11 @@ import boto3
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "apac.amazon.nova-pro-v1:0")
 DEPTS = ["밸런스", "클라이언트·서버", "매칭·랭크", "운영·제재", "콘텐츠·이벤트", "BM·상점", "UX·신규 유저", "커뮤니티·기타"]
 SEVERE = re.compile(r"튕|크래시|강종|접속\s*불가|서버|렉|핑|프레임|버그|오류|핵|치트|결제|환불|먹튀|매칭\s*안|로딩|롤백|계정|보안|정지")
+# ●●●●●(긴급)는 장애성 글이 실제로 있을 때만
+CRITICAL = re.compile(r"서버\s*(?:다운|터|폭파|죽|마비|불안)|접속\s*(?:불가|안\s*[됨돼되])|튕|크래시|강종|강제\s*종료|먹통|무한\s*로딩|"
+                      r"결제\s*(?:오류|안\s*[됨돼되]|실패)|환불|(?:서버|계정|데이터)\s*롤백|계정\s*(?:삭제|증발|날아|해킹)|데이터\s*(?:날아|증발|초기화)|점검\s*연장|접속\s*장애")
+ISSUE_WORDS = {"버그", "핑", "렉", "정지", "제재", "매칭", "튕김", "서버", "결제", "환불", "핵", "로딩", "프레임", "랭크"}
+STOP = {"제보", "증상", "현상", "발생", "불만", "요구", "요청", "문제", "관련", "논의", "신고", "불편", "이슈", "반응", "의견", "및", "대한", "많음", "증가", "호평", "비판", "질문", "개선"}
 VAGUE = re.compile(r"특정|일부 |게임 내 |기타|잡담|밈")
 LEVEL = {5: "긴급", 4: "높음", 3: "보통", 2: "낮음", 1: "참고"}
 
@@ -105,6 +110,14 @@ def score_topics(topics, posts):
         ids = [i for i in dict.fromkeys(t["ids"]) if i in by_id]
         dropped += len(t["ids"]) - len(ids)
         ids = [i for i in ids if i not in used]
+        # 주제 이름의 핵심 단어가 제목·본문에 실제로 있는 글만 센다 (AI가 관계없는 글을 섞는 경우를 걸러냄)
+        keys = [w for w in re.split(r"[\s·,/()]+", t["title"]) if w and w not in STOP]
+        if keys:
+            # 이슈 단어(버그·핑·정지 등)가 주제 이름에 있으면 그 단어는 꼭 있어야 하고, 나머지 단어는 하나 이상
+            must = [k for k in keys if k in ISSUE_WORDS]
+            others = [k for k in keys if k not in ISSUE_WORDS]
+            ok = lambda txt: all(k in txt for k in must) and (not others or any(k in txt for k in others))
+            ids = [i for i in ids if ok(by_id[i]["title"] + by_id[i]["text"])]
         used.update(ids)
         if len(ids) < 2:
             continue
@@ -112,21 +125,27 @@ def score_topics(topics, posts):
         n = len(items)
         eng = sum(_engagement(p) for p in items)
         severe = sum(1 for p in items if SEVERE.search(p["title"] + p["text"]))
+        critical = sum(1 for p in items if CRITICAL.search(p["title"] + p["text"]))
         steam = [p for p in items if p["vote"]]
         neg = sum(1 for p in steam if p["vote"] == "down")
         parts = {"글 수": n * 1.0, "반응": eng * 0.15, "심각 키워드": severe * 2.0,
                  "부정 감정": n * 1.5 if t["sentiment"] == "부정" else 0.0, "스팀 비추천": neg * 1.5}
         raw = sum(parts.values())
-        top = sorted(items, key=_engagement, reverse=True)[:2]
+        top = sorted(items, key=_engagement, reverse=True)[:2]  # 위에서 핵심 단어로 거른 글 중 반응이 큰 글
         out.append({"title": t["title"], "dept": t["dept"], "sentiment": t["sentiment"], "count": n,
-                    "severe": severe, "views": sum(p["views"] for p in items), "comments": sum(p["comments"] for p in items),
+                    "severe": severe, "critical": critical, "views": sum(p["views"] for p in items), "comments": sum(p["comments"] for p in items),
                     "score": round(raw, 1), "parts": {k: round(v, 1) for k, v in parts.items() if v},
                     "recommends": sum(p["recommends"] for p in items), "steam_down": neg, "examples": [{"title": p["title"][:60], "url": p["url"]} for p in top]})
     out.sort(key=lambda x: -x["score"])
-    # 같은 기간 주제끼리의 상대 순위로 5단계: 상위 10% 긴급, 30% 높음, 60% 보통, 85% 낮음, 나머지 참고
-    for i, t in enumerate(out):
-        q = i / max(len(out), 1)
-        lv = 5 if q < .1 else 4 if q < .3 else 3 if q < .6 else 2 if q < .85 else 1
+    # ●●●●●는 장애성 글(서버 다운·접속 불가·튕김·결제 오류·계정 손실 등)이 3건 이상이고 주제의 30% 이상일 때만.
+    # 나머지는 같은 기간 주제끼리 점수 순위로 ●●●●○(상위 25%) ●●●○○(55%) ●●○○○(85%) ●○○○○
+    rest = [t for t in out if not (t["critical"] >= 3 and t["critical"] / t["count"] >= .3)]
+    for t in out:
+        if t not in rest:
+            t["level"] = 5
+    for i, t in enumerate(rest):
+        q = i / max(len(rest), 1)
+        lv = 4 if q < .25 else 3 if q < .55 else 2 if q < .85 else 1
         if t["sentiment"] == "긍정":
             lv = min(lv, 2)  # 긍정 동향은 '낮음'까지만
         t["level"] = lv
@@ -141,5 +160,6 @@ def summary_stats(posts):
 
 
 SCORE_RULE = ("점수 = 글 수×1 + 반응(조회/50 + 댓글×2 + 추천×3)×0.15 + 심각 키워드 글×2 + 부정 주제면 글 수×1.5 + 스팀 비추천×1.5. "
-              "같은 기간 주제끼리 점수 순위로 상위 10% ●●●●●, 30% ●●●●○, 60% ●●●○○, 85% ●●○○○, 나머지 ●○○○○. "
-              "긍정 동향은 ●●○○○까지만, 잡담·밈·대상이 불분명한 주제는 제외.")
+              "글은 주제 이름의 핵심 단어가 제목에 들어간 것만 셉니다. "
+              "●●●●●(긴급)는 서버 다운·접속 불가·튕김·결제 오류·계정 손실 같은 장애성 글이 3건 이상이고 주제의 30% 이상일 때만 붙입니다. "
+              "나머지는 같은 기간 주제끼리 점수 순위로 상위 25% ●●●●○, 55% ●●●○○, 85% ●●○○○, 나머지 ●○○○○. 긍정 동향은 ●●○○○까지만.")
