@@ -4,6 +4,7 @@ import html
 import re
 import ssl
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -114,3 +115,41 @@ def collect_steam(since, lang="koreana", max_pages=5, delay=1.0):
             break
         time.sleep(delay)
     return posts
+
+
+# ── 글 상세 (본문·댓글) : 리포트에 올릴 후보 글만, 낮은 빈도로 ─────────────
+import http.cookiejar
+import json as _json
+
+AD_COMMENT = re.compile(r"…|\.\.\.|\"[^\"]{8,}\"|광고|구독|무료\s*나눔|https?://")
+
+
+def fetch_dc_detail(post_id, max_comments=20):
+    """디시 글의 본문 텍스트, 사진·영상 수, 댓글(광고·뉴스성 댓글 제외)을 가져온다."""
+    no = post_id.split("-", 1)[1]
+    url = f"https://gall.dcinside.com/mgallery/board/view/?id={DC_GALLERY}&no={no}"
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), urllib.request.HTTPSHandler(context=_CTX))
+    s = opener.open(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=20).read().decode("utf-8", errors="ignore")
+    i = s.find('<div class="write_div"')
+    seg = s[i:i + 8000] if i >= 0 else ""
+    if '<div class="btn_recommend_box' in seg:
+        seg = seg[:seg.find('<div class="btn_recommend_box')]
+    media = len(re.findall(r"<img |<video|<iframe", seg))
+    seg = re.sub(r"<script.*?</script>", " ", seg, flags=re.S)
+    body = _text(seg).replace("- dc official App", "").strip()
+    comments = []
+    m = re.search(r'name="e_s_n_o" value="([^"]+)"', s)
+    if m:
+        data = urllib.parse.urlencode({"id": DC_GALLERY, "no": no, "cmt_id": DC_GALLERY, "cmt_no": no, "e_s_n_o": m.group(1),
+                                       "comment_page": 1, "sort": "", "prevCnt": "", "board_type": "", "_GALLTYPE_": "M"}).encode()
+        req = urllib.request.Request("https://gall.dcinside.com/board/comment/", data=data,
+                                     headers={"User-Agent": UA, "X-Requested-With": "XMLHttpRequest", "Referer": url})
+        try:
+            for c in (_json.loads(opener.open(req, timeout=20).read().decode("utf-8", errors="ignore")).get("comments") or []):
+                memo = _text(c.get("memo") or "").replace("- dc App", "").strip()
+                if memo and not AD_COMMENT.search(memo) and len(memo) <= 120:
+                    comments.append(memo)
+        except (ValueError, OSError):
+            pass
+    return {"body": body[:500], "media": media, "comments": comments[:max_comments]}

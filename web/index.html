@@ -102,7 +102,7 @@ const key = () => $('#key').value || new URLSearchParams(location.search).get('k
 
 function topicHTML(t){
   const p = t.parts || {};
-  const why = `글 ${t.count}개 · 조회 ${t.views.toLocaleString()} · 댓글 ${t.comments} · 추천 ${t.recommends ?? 0}` + (t.severe ? ` · 심각 키워드 글 ${t.severe}개` : '') + (t.steam_down ? ` · 스팀 비추천 ${t.steam_down}` : '');
+  const why = `글 ${t.count}개 · 조회 ${t.views.toLocaleString()} · 댓글 ${t.comments} · 추천 ${t.recommends ?? 0}` + (t.severe ? ` · 심각 키워드 글 ${t.severe}개` : '') + (t.steam_down ? ` · 스팀 비추천 ${t.steam_down}` : '') + (t.critical ? ` · 장애성 글 ${t.critical}개` : '') + (t.checked ? ` · 본문·댓글 확인 ${t.confirmed}/${t.checked}` : '');
   const parts = Object.entries(p).map(([k,v]) => `${k} ${v}`).join(' + ');
   return `<div class="tp"><span class="d l${t.level}">${dots(t.level)}</span><b>${esc(t.title)}</b><span class="meta">${esc(t.dept)} · ${esc(t.sentiment)} · ${LV[t.level]}</span>
     <div class="why">근거: ${why} → 점수 ${t.score} <span style="color:var(--t3)">(${esc(parts)})</span></div>

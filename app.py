@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from pulse import analyze, slack, store
-from pulse.collect import KST, collect_dc, collect_steam
+from pulse.collect import KST, collect_dc, collect_steam, fetch_dc_detail
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS = os.path.join(BASE, "data", "settings.json")
@@ -56,6 +56,8 @@ def make_report(start, end, slot=None):
     if not posts:
         raise ValueError("이 기간에 수집된 글이 없습니다. 최근 일주일 안에서 골라 주세요.")
     topics, _ = analyze.score_topics(analyze.cluster(analyze.pick(posts)), posts)
+    # 제목만으로는 반어·농담·다른 게임 이야기를 구분할 수 없어, 본문·댓글을 열어 해당 여부를 다시 판정한다
+    topics = analyze.assign_levels(analyze.verify(topics, posts, lambda p: fetch_dc_detail(p["id"])))
     stats = analyze.summary_stats(posts)
     payload = slack.build(start, end, stats, topics, PAGE_URL)
     secs = round(time.time() - t0, 1)

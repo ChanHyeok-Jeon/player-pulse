@@ -28,10 +28,11 @@ def build(start, end, stats, topics, page_url=""):
             f"근거: 글 {t['count']}개 · 조회 {t['views']:,} · 댓글 {t['comments']} · 추천 {t['recommends']}"
             + (f" · 장애성 글 {t['critical']}개" if t.get('critical') else "")
             + (f" · 심각 키워드 글 {t['severe']}개" if t['severe'] else "") + (f" · 스팀 비추천 {t['steam_down']}" if t['steam_down'] else "")
+            + (f" · 본문·댓글 확인 {t['confirmed']}/{t['checked']}" if t.get('checked') else "")
             + f" → 점수 {t['score']}\n> {ex}"}})
     blocks.append({"type": "divider"})
     blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text":
-        "●●●●● 긴급(서버·접속·결제 등 장애성 글이 있을 때만) · ●●●●○ 높음 · ●●●○○ 보통 · ●●○○○ 낮음 · ●○○○○ 참고  |  점수는 코드가 계산하고, 글은 주제 핵심 단어가 들어간 것만 셉니다."
+        "●●●●● 긴급(서버·접속·결제 등 장애성 글이 있을 때만) · ●●●●○ 높음 · ●●●○○ 보통 · ●●○○○ 낮음 · ●○○○○ 참고  |  점수는 코드가 계산하고, 상위 글은 본문·댓글까지 열어 주제에 맞는지 다시 확인합니다."
         + (f"  |  <{page_url}|설정·미리보기>" if page_url else "")}]})
     return {"text": f"이터널 리턴 유저 동향 {_d(start)} ~ {_d(end)}", "blocks": blocks}
 

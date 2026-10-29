@@ -18,7 +18,7 @@ CRITICAL = re.compile(r"서버\s*(?:다운|터|폭파|죽|마비|불안)|접속\
                       r"결제\s*(?:오류|안\s*[됨돼되]|실패)|환불|(?:서버|계정|데이터)\s*롤백|계정\s*(?:삭제|증발|날아|해킹)|데이터\s*(?:날아|증발|초기화)|점검\s*연장|접속\s*장애")
 ISSUE_WORDS = {"버그", "핑", "렉", "정지", "제재", "매칭", "튕김", "서버", "결제", "환불", "핵", "로딩", "프레임", "랭크"}
 STOP = {"제보", "증상", "현상", "발생", "불만", "요구", "요청", "문제", "관련", "논의", "신고", "불편", "이슈", "반응", "의견", "및", "대한", "많음", "증가", "호평", "비판", "질문", "개선"}
-VAGUE = re.compile(r"특정|일부 |게임 내 |기타|잡담|밈")
+VAGUE = re.compile(r"특정|일부 |게임 내 |기타|잡담|밈|팁|공략|가이드|빌드 추천|질문 모음")
 LEVEL = {5: "긴급", 4: "높음", 3: "보통", 2: "낮음", 1: "참고"}
 
 TOOL = {"toolSpec": {
@@ -38,6 +38,8 @@ SYSTEM = """당신은 게임 개발팀 PM을 돕는 보조입니다. 이터널 �
 - 주제 이름에는 대상의 실제 이름(실험체·아이템·시스템·이벤트 이름)을 꼭 넣으세요. "특정", "일부", "게임 내" 같은 막연한 말은 쓰지 말고, 대상을 알 수 없으면 그 주제를 만들지 마세요.
 - 주제 이름은 "무엇에 대해 어떤 반응인지" 구체적으로 쓰세요. 예: "코렐 스킬셋이 과하다는 불만", "랭크 매칭 대기 시간 증가 불만". "~관련 논의"처럼 막연하게 쓰지 마세요.
 - ids에는 목록에 있는 글 번호만 쓰세요. 지어내지 마세요.
+- "핑"은 네트워크 지연(핑 수치·렉·끊김)인지 게임 안 신호(핑 찍기)인지 구분해 주제 이름에 쓰세요. 예: "KT 회선 네트워크 지연(핑) 불만", "아군 핑 남용 불만".
+- 공략·팁·빌드 추천·단순 질문 모음은 이슈가 아니므로 주제로 만들지 마세요.
 - 욕설이나 비하 표현은 옮기지 말고 중립적으로 바꾸세요."""
 
 
@@ -133,12 +135,19 @@ def score_topics(topics, posts):
         raw = sum(parts.values())
         top = sorted(items, key=_engagement, reverse=True)[:2]  # 위에서 핵심 단어로 거른 글 중 반응이 큰 글
         out.append({"title": t["title"], "dept": t["dept"], "sentiment": t["sentiment"], "count": n,
+                    "ids": [p["id"] for p in sorted(items, key=_engagement, reverse=True)],
                     "severe": severe, "critical": critical, "views": sum(p["views"] for p in items), "comments": sum(p["comments"] for p in items),
                     "score": round(raw, 1), "parts": {k: round(v, 1) for k, v in parts.items() if v},
                     "recommends": sum(p["recommends"] for p in items), "steam_down": neg, "examples": [{"title": p["title"][:60], "url": p["url"]} for p in top]})
+    assign_levels(out)
+    out.sort(key=lambda x: (-x["level"], -x["score"]))
+    return out, dropped
+
+
+def assign_levels(out):
+    """●●●●●는 장애성 글(서버 다운·접속 불가·튕김·결제 오류·계정 손실 등)이 3건 이상이고 주제의 30% 이상일 때만.
+    나머지는 같은 기간 주제끼리 점수 순위로 ●●●●○(상위 25%) ●●●○○(55%) ●●○○○(85%) ●○○○○."""
     out.sort(key=lambda x: -x["score"])
-    # ●●●●●는 장애성 글(서버 다운·접속 불가·튕김·결제 오류·계정 손실 등)이 3건 이상이고 주제의 30% 이상일 때만.
-    # 나머지는 같은 기간 주제끼리 점수 순위로 ●●●●○(상위 25%) ●●●○○(55%) ●●○○○(85%) ●○○○○
     rest = [t for t in out if not (t["critical"] >= 3 and t["critical"] / t["count"] >= .3)]
     for t in out:
         if t not in rest:
@@ -150,7 +159,7 @@ def score_topics(topics, posts):
             lv = min(lv, 2)  # 긍정 동향은 '낮음'까지만
         t["level"] = lv
     out.sort(key=lambda x: (-x["level"], -x["score"]))
-    return out, dropped
+    return out
 
 
 def summary_stats(posts):
@@ -160,6 +169,65 @@ def summary_stats(posts):
 
 
 SCORE_RULE = ("점수 = 글 수×1 + 반응(조회/50 + 댓글×2 + 추천×3)×0.15 + 심각 키워드 글×2 + 부정 주제면 글 수×1.5 + 스팀 비추천×1.5. "
-              "글은 주제 이름의 핵심 단어가 제목에 들어간 것만 셉니다. "
+              "글은 주제 이름의 핵심 단어가 제목에 들어간 것만 세고, 주제마다 반응이 큰 글 최대 6개는 본문·사진/영상·댓글까지 열어 AI가 정말 해당하는지 다시 판정합니다(반어·농담·다른 게임 이야기 제외). 해당 비율만큼 점수를 곱하고, 해당 글이 2개 미만이면 주제를 뺍니다. "
               "●●●●●(긴급)는 서버 다운·접속 불가·튕김·결제 오류·계정 손실 같은 장애성 글이 3건 이상이고 주제의 30% 이상일 때만 붙입니다. "
               "나머지는 같은 기간 주제끼리 점수 순위로 상위 25% ●●●●○, 55% ●●●○○, 85% ●●○○○, 나머지 ●○○○○. 긍정 동향은 ●●○○○까지만.")
+
+
+# ── 본문·댓글로 주제 해당 여부 검증 ──────────────────────────
+VERIFY_SYSTEM = """당신은 커뮤니티 글이 주어진 주제에 정말 해당하는지 엄격하게 판정합니다. 제목만 보지 말고 본문과 댓글 분위기까지 보세요.
+- 대상과 반응이 모두 맞아야 Y입니다. 주제가 '불만'이면 글이 실제로 불만·비판이어야 하고, 단순 질문·팁·칭찬·잡담이면 N입니다.
+  주제가 '버그'면 실제 오작동 제보여야 하고, '너프/버프 요구'면 실제로 조정을 요구해야 합니다.
+- '핑'은 네트워크 지연(핑 수치, 렉, 끊김)과 게임 안의 신호(핑 찍기)를 구분하세요. 주제와 다른 뜻이면 N입니다.
+- 반어·농담·칭찬(예: 잘한 플레이를 보고 '핵 같다'), 다른 게임 이야기, 주제와 관계없는 잡담이면 N입니다.
+- 애매하면 N으로 판정하세요.
+각 글마다 한 줄로만 답하세요: 번호 | Y 또는 N | 이유(10자 이내)"""
+VLINE = re.compile(r"^\s*(\d+)\s*\|\s*([YN])\s*\|?\s*(.*)$")
+
+
+def verify(topics, posts, fetch, per_topic=6, top_n=10, delay=0.4):
+    """상위 주제마다 반응 큰 글 몇 개의 본문·댓글을 가져와 AI가 해당 여부를 판정한다.
+    해당 비율만큼 점수를 조정하고, 해당 글이 2개 미만이면 주제를 뺀다. fetch(post) → {body, media, comments}."""
+    import time as _t
+    by_id = {p["id"]: p for p in posts}
+    checks, lines, n = [], [], 0
+    for ti, t in enumerate(topics[:top_n]):
+        for pid in t["ids"][:per_topic]:
+            p = by_id[pid]
+            if p["source"].startswith("디시"):
+                try:
+                    d = fetch(p)
+                except Exception:
+                    d = {"body": "", "media": 0, "comments": []}
+                _t.sleep(delay)
+            else:
+                d = {"body": p["text"], "media": 0, "comments": []}
+            n += 1
+            checks.append((n, ti, pid))
+            lines.append(f"{n} | 주제: {t['title']} | 제목: {p['title'][:60]} | 본문: {d['body'][:200] or '(없음)'}"
+                         f"{' | 사진·영상 ' + str(d['media']) + '개' if d['media'] else ''} | 댓글: {' / '.join(d['comments'][:8])[:300] or '(없음)'}")
+    if not lines:
+        return topics
+    client = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "ap-northeast-2"))
+    res = client.converse(modelId=MODEL_ID, system=[{"text": VERIFY_SYSTEM}],
+                          messages=[{"role": "user", "content": [{"text": "\n".join(lines)}]}],
+                          inferenceConfig={"maxTokens": 3000, "temperature": 0})
+    verdict = {}
+    for ln in "".join(c.get("text", "") for c in res["output"]["message"]["content"]).splitlines():
+        m = VLINE.match(ln)
+        if m:
+            verdict[int(m.group(1))] = m.group(2) == "Y"
+    kept = []
+    for ti, t in enumerate(topics):
+        mine = [(k, pid) for k, i, pid in checks if i == ti]
+        if not mine:
+            continue  # 검증 대상에서 밀린 하위 주제는 리포트에서 뺀다
+        yes = [pid for k, pid in mine if verdict.get(k)]
+        t["checked"], t["confirmed"] = len(mine), len(yes)
+        if len(yes) < 2:
+            continue
+        ratio = len(yes) / len(mine)
+        t["score"] = round(t["score"] * ratio, 1)
+        t["examples"] = [{"title": by_id[i]["title"][:60], "url": by_id[i]["url"]} for i in yes[:2]]
+        kept.append(t)
+    return kept
