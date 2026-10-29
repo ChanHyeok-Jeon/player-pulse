@@ -40,3 +40,18 @@ def oldest():
     with _conn() as c:
         r = c.execute("SELECT MIN(created) FROM posts").fetchone()
     return r[0] if r else None
+
+
+def newest(source_prefix="dc-"):
+    with _conn() as c:
+        r = c.execute("SELECT MAX(created) FROM posts WHERE id LIKE ?", (source_prefix + "%",)).fetchone()
+    return r[0] if r else None
+
+
+def get_many(ids):
+    if not ids:
+        return []
+    with _conn() as c:
+        c.row_factory = sqlite3.Row
+        rows = {r["id"]: dict(r) for r in c.execute(f"SELECT * FROM posts WHERE id IN ({','.join('?' * len(ids))})", list(ids))}
+    return [rows[i] for i in ids if i in rows]

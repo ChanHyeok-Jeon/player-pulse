@@ -36,7 +36,23 @@ input{font:inherit;font-size:14px;background:var(--c2);border:1px solid var(--li
 .rule{font-size:13px;color:var(--t2);line-height:1.75}
 .rule code{font-family:inherit;color:#fff}
 .msg{font-size:13px;margin-top:.6rem;color:var(--warn)}
-.rep{background:#1A1D21;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:1rem 1.1rem;margin-bottom:12px}
+.sec{background:var(--c1);border:1px solid var(--line);border-radius:12px;margin-bottom:14px}
+.sec>summary{list-style:none;cursor:pointer;padding:1rem 1.2rem;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
+.sec>summary::-webkit-details-marker,.rep>summary::-webkit-details-marker{display:none}
+.sec>summary::before,.rep>summary::before{content:'▸';color:var(--t3);transition:transform .15s}
+.sec[open]>summary::before,.rep[open]>summary::before{transform:rotate(90deg)}
+.sec>summary small{font-size:12.5px;font-weight:500;color:var(--t3)}
+.sec .cnt{font-size:12px;font-weight:700;border-radius:20px;padding:1px 9px;background:var(--c2);color:var(--t2)}
+.sec .cnt.hot{background:rgba(242,166,90,.16);color:var(--warn)}
+.sec-b{padding:0 1rem 1rem}
+.rep{background:#1A1D21;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;margin-bottom:8px}
+.rep>summary{list-style:none;cursor:pointer;padding:.75rem 1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.rep>summary .per{font-weight:700}
+.rep>summary .sm{font-size:12px;color:var(--t3)}
+.rep>summary .top{font-family:ui-monospace,Menlo,monospace;color:var(--accent);letter-spacing:1px;font-size:12.5px}
+.rep>summary .top.l5,.rep>summary .top.l4{color:var(--bad)}.rep>summary .top.l3{color:var(--warn)}
+.rep>summary .sp{margin-left:auto;display:flex;align-items:center;gap:6px}
+.rep-b{padding:0 1.1rem 1rem}
 .rep-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.3rem}
 .rep-h b{font-size:15px}
 .rep-h span{font-size:12px;color:var(--t3)}
@@ -50,6 +66,26 @@ input{font:inherit;font-size:14px;background:var(--c2);border:1px solid var(--li
 .tp .ex{font-size:12px;color:var(--t3);margin-top:2px}
 .tp .ex a{color:var(--t2)}
 .empty{color:var(--t3);text-align:center;padding:2rem;font-size:14px}
+.bd{font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px}
+.bd.wait{background:rgba(242,166,90,.16);color:var(--warn)}.bd.ok{background:rgba(var(--a),.16);color:var(--accent)}.bd.sent{background:var(--c2);color:var(--t3)}
+.btn.sm{font-size:12.5px;padding:.35rem .8rem}
+.tp .pm{font-size:12.5px;color:var(--warn);margin-top:2px}.tp .note{font-size:12.5px;color:#fff;margin-top:2px}
+.ed{border-top:1px solid var(--line);padding:.7rem 0}.ed.off{opacity:.45}
+.ed-h{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ed-h .ti{flex:1;min-width:220px}
+select{font:inherit;font-size:13px;background:var(--c2);border:1px solid var(--line);color:#fff;border-radius:8px;padding:.4rem .5rem;color-scheme:dark}
+.ed input.rs,.ed input.nt{width:100%;margin-top:6px;font-size:13px}
+.ed input.rs.need{border-color:var(--warn)}
+.ed .rm{display:flex;align-items:center;gap:4px;margin:0;font-size:12.5px;color:var(--t2)}
+.cands{margin-top:6px;font-size:12.5px;color:var(--t3)}
+.cands label{display:flex;gap:6px;align-items:flex-start;margin:.2rem 0;font-size:12.5px;color:var(--t2)}
+.cands a{color:var(--t2)}
+details.log{font-size:12px;color:var(--t3);margin-top:.6rem}details.log div{margin:.15rem 0}
+.sw{display:flex;align-items:center;gap:6px;margin-top:.7rem;font-size:13px;color:var(--t2)}
+.shots{display:grid;gap:14px}
+.shot{margin:0;background:#1A1D21;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.shot img{display:block;width:100%;height:auto;cursor:zoom-in}
+.shot figcaption{font-size:12.5px;color:var(--t2);padding:.55rem .8rem}
 footer{font-size:12px;color:var(--t3);padding:1.2rem 0 2.5rem}
 @media(max-width:860px){.row{grid-template-columns:1fr}}
 </style>
@@ -59,8 +95,8 @@ footer{font-size:12px;color:var(--t3);padding:1.2rem 0 2.5rem}
   <div class="top">
     <a class="back" href="/">← 전찬혁 포트폴리오</a>
     <h1>유저 동향 아침 브리핑</h1>
-    <p class="lead">게임사 인턴 때 커뮤니티 동향 파악 과제에 <b>약 2시간</b>이 걸렸고, 현업 담당자도 매일 아침 <b>20~30분</b>을 들여 정리해 공유한다고 들었습니다. 이 시간을 줄이려고 만들었습니다. 매시간 공개 커뮤니티 글을 모으고, 정해진 시각에 <b>중요도 순 동향을 Slack 전체 채널로</b> 보냅니다. 월요일에는 금요일 아침 이후 주말 동향을 한 번에 보냅니다.</p>
-    <div class="flow"><span>매시간 수집 (디시 갤러리 · 스팀 리뷰)</span><span class="ai">AI: 비슷한 글 묶기</span><span>코드: 근거 집계·중요도 계산</span><span>Slack 발송 (요일·시각 설정)</span><span>각 부서가 자기 주제 확인</span></div>
+    <p class="lead">게임사 인턴 때 커뮤니티 동향 파악 과제에 <b>약 2시간</b>이 걸렸고, 현업 담당자도 매일 아침 <b>20~30분</b>을 들여 정리해 공유한다고 들었습니다. 이 시간을 줄이려고 만들었습니다. 매시간 공개 커뮤니티 글을 모으고, 정해진 시각에 <b>중요도 순 동향을 Slack 전체 채널로</b> 보냅니다. 월요일에는 금요일 아침 이후 주말 동향을 한 번에 보냅니다. 보내기 전에 <b>PM이 검토·수정</b>할 수 있습니다.</p>
+    <div class="flow"><span>매시간 수집 (디시 갤러리 · 스팀 리뷰)</span><span class="ai">AI: 글마다 성격 분류 (버그·장애·밸런스·질문…)</span><span>코드: 묶기·고정 기준으로 중요도</span><span>관리자 검토·수정</span><span>Slack 발송 (요일·시각 설정)</span><span>각 부서가 자기 주제 확인</span></div>
   </div>
 
   <div class="row">
@@ -69,8 +105,9 @@ footer{font-size:12px;color:var(--t3);padding:1.2rem 0 2.5rem}
       <label>보내는 시각 (한국 시간)</label><input type="time" id="time" value="09:00">
       <label>보내는 요일</label>
       <div class="days" id="days"></div>
+      <label class="sw"><input type="checkbox" id="auto"> 자동 전송 (검토하지 않아도 예약 시각에 초안 그대로 발송)</label>
       <div class="status" id="status">불러오는 중…</div>
-      <label>관리자 키 (설정 저장·Slack 발송용)</label><input type="password" id="key" placeholder="관리자만 입력" style="width:100%">
+      <label>관리자 키 (설정 저장·Slack 발송용, 검토·수정은 키 없이 가능)</label><input type="password" id="key" placeholder="관리자만 입력" style="width:100%">
       <label>Slack Webhook (바꿀 때만)</label><input id="hook" placeholder="https://hooks.slack.com/services/..." style="width:100%">
       <div class="btns"><button class="btn ghost" id="saveBtn">설정 저장</button></div>
     </div>
@@ -78,7 +115,8 @@ footer{font-size:12px;color:var(--t3);padding:1.2rem 0 2.5rem}
       <h3>기간을 정해서 동향 받기</h3>
       <label>시작</label><input type="datetime-local" id="from">
       <label>끝</label><input type="datetime-local" id="to">
-      <div class="btns"><button class="btn" id="previewBtn">동향 만들기</button><button class="btn ghost" id="sendBtn">Slack으로 보내기 (관리자)</button></div>
+      <div class="btns"><button class="btn" id="previewBtn">동향 만들기</button></div>
+      <div class="status">만든 리포트는 아래 카드에서 검토·수정한 뒤 Slack으로 보낼 수 있습니다 (관리자).</div>
       <div class="status" id="range"></div>
       <div class="msg" id="msg"></div>
     </div>
@@ -100,56 +138,163 @@ const fmt = iso => { const d = new Date(iso); return `${d.getMonth()+1}/${d.getD
 const local = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 const key = () => $('#key').value || new URLSearchParams(location.search).get('key') || '';
 
+let REPORTS = [];
+const OPEN = new Set(), SEC = {};  // 다시 그려도 열어 둔 섹션·리포트를 유지
 function topicHTML(t){
   const p = t.parts || {};
-  const why = `글 ${t.count}개 · 조회 ${t.views.toLocaleString()} · 댓글 ${t.comments} · 추천 ${t.recommends ?? 0}` + (t.severe ? ` · 심각 키워드 글 ${t.severe}개` : '') + (t.steam_down ? ` · 스팀 비추천 ${t.steam_down}` : '') + (t.critical ? ` · 장애성 글 ${t.critical}개` : '') + (t.checked ? ` · 본문·댓글 확인 ${t.confirmed}/${t.checked}` : '');
+  const why = `글 ${t.count}개 · 조회 ${t.views.toLocaleString()} · 댓글 ${t.comments} · 추천 ${t.recommends ?? 0}` + (t.steam_down ? ` · 스팀 비추천 ${t.steam_down}` : '') + (t.critical ? ` · 장애성 글 ${t.critical}개` : '') + (t.checked ? ` · ${t.verify === 'full' ? '본문·댓글' : '제목'} 확인 ${t.confirmed}/${t.checked}` : '');
   const parts = Object.entries(p).map(([k,v]) => `${k} ${v}`).join(' + ');
-  return `<div class="tp"><span class="d l${t.level}">${dots(t.level)}</span><b>${esc(t.title)}</b><span class="meta">${esc(t.dept)} · ${esc(t.sentiment)} · ${LV[t.level]}</span>
+  return `<div class="tp"><span class="d l${t.level}">${dots(t.level)}</span><b>${esc(t.title)}</b><span class="meta">${esc(t.kind || '')} · ${esc(t.dept)} · ${esc(t.sentiment)} · ${LV[t.level]}</span>
+    ${t.reason ? `<div class="why"><b>왜 이 단계</b>: ${esc(t.reason)}</div>` : ''}
+    ${t.pm ? `<div class="pm">PM 조정: ${dots(t.pm.from)} → ${dots(t.level)} · ${esc(t.pm.reason)}</div>` : ''}
+    ${t.note ? `<div class="note">📝 ${esc(t.note)}</div>` : ''}
     <div class="why">근거: ${why} → 점수 ${t.score} <span style="color:var(--t3)">(${esc(parts)})</span></div>
     <div class="ex">${t.examples.map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>`).join(' · ')}</div></div>`;
 }
-function reportHTML(r, label){
-  const days = (new Date(r.end) - new Date(r.start)) / 86400000;
+const isAuto = r => r.slot.startsWith('auto-');
+function badge(r){
+  if (r.sent) return `<span class="bd sent">Slack 발송 ${fmt(r.sent)}</span>`;
+  if (r.status === 'approved') return `<span class="bd ok">검토 완료 · ${isAuto(r) ? fmt(r.end) + ' 발송 예정' : '발송 대기'}</span>`;
+  return `<span class="bd wait">검토 대기</span>`;
+}
+const kind = r => (new Date(r.end) - new Date(r.start)) / 86400000 >= 2 ? '주말 동향' : '금일 반응';
+function stats(r){
   const s = r.stats, neg = s.steam ? ` · 스팀 리뷰 부정 ${Math.round(100*s.steam_neg/s.steam)}%` : '';
-  return `<div class="rep"><div class="rep-h"><b>📋 이터널 리턴 유저 동향 · ${days >= 2 ? '주말 동향' : '금일 반응'}</b><span>${label || ''}${r.sent ? ' · Slack 발송 ' + fmt(r.sent) : ''}</span></div>
-    <div class="rep-s"><b>${fmt(r.start)} ~ ${fmt(r.end)}</b> · 수집 ${s.total}건 (디시 ${s.dc} · 스팀 ${s.steam})${neg} · 정리에 걸린 시간 ${r.seconds}초</div>
-    ${r.topics.slice(0, 10).map(topicHTML).join('')}</div>`;
+  return `<div class="rep-s">📋 이터널 리턴 유저 동향 · ${kind(r)} · 수집 ${s.total}건 (디시 ${s.dc} · 스팀 ${s.steam})${neg} · 정리에 걸린 시간 ${r.seconds}초</div>`;
+}
+function summary(r, label){
+  const shown = r.topics.filter(t => !t.removed), top = Math.max(0, ...shown.map(t => t.level));
+  return `<summary><span class="per">${fmt(r.start)} ~ ${fmt(r.end)}</span><span class="sm">${label} · ${kind(r)}</span>
+    ${top ? `<span class="top l${top}">${dots(top)}</span><span class="sm">주제 ${shown.length}개</span>` : '<span class="sm">주제 없음</span>'}
+    <span class="sp">${badge(r)}</span></summary>`;
+}
+function logHTML(r){
+  const log = r.log || [];
+  if (!log.length) return '';
+  return `<details class="log"><summary>수정 기록 ${log.length}건</summary>${log.map(l => `<div>${fmt(l.at)} · ${l.topic ? esc(l.topic) + ' · ' : ''}${esc(l.field)}${l.field === '검토 완료' ? '' : `: ${esc(typeof l.from === 'number' && l.field === '중요도' ? dots(l.from) : l.from)} → ${esc(typeof l.to === 'number' && l.field === '중요도' ? dots(l.to) : l.to)}`}${l.reason ? ' (' + esc(l.reason) + ')' : ''}${l.by === '키 없음' ? ' · 키 없이 수정' : ''}</div>`).join('')}</details>`;
+}
+function viewBody(r, i){
+  const shown = r.topics.filter(t => !t.removed).sort((a, b) => b.level - a.level || b.score - a.score).slice(0, 10);
+  return `${stats(r)}${shown.map(topicHTML).join('') || '<div class="why">보낼 주제가 없습니다.</div>'}
+    ${r.sent ? '' : `<div class="btns"><button class="btn sm" onclick="editMode(${i})">검토·수정</button></div>`}
+    ${logHTML(r)}`;
+}
+function reportHTML(r, label, i){
+  return `<details class="rep" id="rep-${i}" data-slot="${esc(r.slot)}" ${OPEN.has(r.slot) ? 'open' : ''}>${summary(r, label)}<div class="rep-b">${viewBody(r, i)}</div></details>`;
+}
+function editHTML(r, label, i){
+  const opts = lv => [5,4,3,2,1].map(l => `<option value="${l}" ${l === lv ? 'selected' : ''}>${dots(l)} ${LV[l]}</option>`).join('');
+  const topics = r.topics.map((t, j) => {
+    const auto = t.auto_level ?? t.level, chosen = t.examples.map(e => e.url);
+    const cands = [...t.examples, ...(t.cands || []).filter(c => !chosen.includes(c.url))];
+    return `<div class="ed ${t.removed ? 'off' : ''}" data-j="${j}" data-auto="${auto}">
+      <div class="ed-h"><select class="lv">${opts(t.level)}</select><input class="ti" value="${esc(t.title)}">
+        <label class="rm"><input type="checkbox" class="rmv" ${t.removed ? 'checked' : ''}> 주제 빼기</label></div>
+      <div class="why">코드 판단: ${dots(auto)} ${LV[auto]} · ${esc(t.reason || '')} · 글 ${t.count}개</div>
+      <input class="rs ${t.level !== auto ? 'need' : ''}" placeholder="중요도를 바꾼 이유 (바꿀 때 필수, Slack에 표시)" value="${esc(t.pm ? t.pm.reason : '')}">
+      <input class="nt" placeholder="PM 메모 (선택, Slack에 표시)" value="${esc(t.note || '')}">
+      <div class="cands">근거 링크 (최대 3개, 체크한 글만 보냅니다)${cands.map(c => `<label><input type="checkbox" class="cx" value="${esc(c.url)}" ${chosen.includes(c.url) ? 'checked' : ''}><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a></label>`).join('')}</div>
+    </div>`;
+  }).join('');
+  const later = isAuto(r) && new Date(r.end) > new Date();
+  return `${stats(r)}${topics}
+    <div class="btns"><button class="btn ghost sm" onclick="saveEdit(${i})">저장</button>
+      <button class="btn sm" onclick="saveEdit(${i}, true)">${later ? `검토 완료 (${fmt(r.end)}에 발송)` : '검토 완료하고 보내기'}</button>
+      ${later ? `<button class="btn ghost sm" onclick="saveEdit(${i}, true, true)">검토 완료하고 지금 보내기</button>` : ''}
+      <button class="btn ghost sm" onclick="cancelEdit(${i})">취소</button></div>
+    <div class="msg" id="emsg-${i}"></div>${logHTML(r)}`;
+}
+const labelOf = r => isAuto(r) ? '예약 발송' : r.slot.startsWith('batch') ? '지난 리포트' : '기간 지정';
+function editMode(i){
+  const box = $('#rep-' + i); box.open = true;
+  box.querySelector('.rep-b').innerHTML = editHTML(REPORTS[i], labelOf(REPORTS[i]), i);
+  box.querySelectorAll('.ed').forEach(ed => {
+    ed.querySelector('.lv').onchange = e => ed.querySelector('.rs').classList.toggle('need', +e.target.value !== +ed.dataset.auto);
+    ed.querySelector('.rmv').onchange = e => ed.classList.toggle('off', e.target.checked);
+    ed.querySelectorAll('.cx').forEach(cx => cx.onchange = () => {
+      if (ed.querySelectorAll('.cx:checked').length > 3) { cx.checked = false; alert('근거 링크는 3개까지 고를 수 있습니다.'); }
+    });
+  });
+}
+function cancelEdit(i){ $('#rep-' + i).querySelector('.rep-b').innerHTML = viewBody(REPORTS[i], i); }
+async function saveEdit(i, approve, sendNow){
+  const r = REPORTS[i], box = $('#rep-' + i), m = $('#emsg-' + i);
+  const topics = [...box.querySelectorAll('.ed')].map(ed => ({idx: +ed.dataset.j, level: +ed.querySelector('.lv').value,
+    title: ed.querySelector('.ti').value, removed: ed.querySelector('.rmv').checked, note: ed.querySelector('.nt').value,
+    reason: ed.querySelector('.rs').value, examples: [...ed.querySelectorAll('.cx:checked')].map(x => x.value)}));
+  const miss = topics.find(t => !t.removed && t.level !== +box.querySelector(`.ed[data-j="${t.idx}"]`).dataset.auto && !t.reason.trim());
+  if (miss) { m.textContent = `'${miss.title}'의 중요도를 바꾼 이유를 적어 주세요.`; return; }
+  if (approve && !key()) { m.textContent = 'Slack으로 보내려면 관리자 키가 필요합니다. 수정 내용은 "저장"으로 남길 수 있습니다.'; $('#key').focus(); return; }
+  if (approve && !confirm(sendNow || !(isAuto(r) && new Date(r.end) > new Date()) ? '지금 Slack으로 보낼까요?' : '검토를 마치고 예약 시각에 보낼까요?')) return;
+  m.textContent = '저장하는 중…';
+  try {
+    let res = await fetch(`api/reports/${r.slot}/edit`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key: key(), topics})});
+    if (!res.ok) throw new Error((await res.json()).detail || '저장하지 못했습니다.');
+    if (approve) {
+      res = await fetch(`api/reports/${r.slot}/approve`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key: key(), send_now: !!sendNow})});
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.detail || '검토 완료 처리를 하지 못했습니다.');
+      $('#msg').textContent = j.sent ? 'Slack으로 보냈습니다.' : `검토 완료. ${fmt(j.scheduled)}에 보냅니다.`;
+    }
+    await load();
+  } catch (e) { m.textContent = e.message; }
 }
 
+let SHOTS_HTML = '';
+async function loadShots(){
+  try {
+    const list = await (await fetch('api/shots')).json();
+    if (!list.length) return;
+    SHOTS_HTML = `<details class="sec" data-k="shots" ${SEC.shots ? 'open' : ''}><summary>공유 결과 이미지<span class="cnt">${list.length}장</span><small>실제 Slack에서 받은 화면</small></summary>
+      <div class="sec-b shots">${list.map(x => `<figure class="shot"><a href="${esc(x.src)}" target="_blank" rel="noopener"><img src="${esc(x.src)}" alt="${esc(x.caption || 'Slack 수신 화면')}" loading="lazy"></a>${x.caption ? `<figcaption>${esc(x.caption)}</figcaption>` : ''}</figure>`).join('')}</div></details>`;
+  } catch (e) {}
+}
 async function load(){
   const st = await (await fetch('api/state')).json();
   const s = st.settings;
   $('#time').value = s.time;
   $('#days').innerHTML = [...W].map((d, i) => `<label><input type="checkbox" value="${i}" ${s.weekdays.includes(i) ? 'checked' : ''}>${d}</label>`).join('');
-  $('#status').innerHTML = s.webhook_set ? `Slack 연결됨 · 매주 <b>${s.weekdays.map(i => W[i]).join('·')}</b> <b>${s.time}</b>에 발송` : 'Slack Webhook이 아직 연결되지 않았습니다.';
+  $('#auto').checked = s.auto_send;
+  $('#status').innerHTML = (s.webhook_set ? `Slack 연결됨 · 매주 <b>${s.weekdays.map(i => W[i]).join('·')}</b> <b>${s.time}</b>에 발송` : 'Slack Webhook이 아직 연결되지 않았습니다.')
+    + `<br>발송 ${s.draft_minutes}분 전에 초안을 만듭니다. ` + (s.auto_send ? '<b>자동 전송 켜짐</b>: 검토하지 않아도 예약 시각에 초안 그대로 보냅니다.' : '<b>검토 후 발송</b>: 아래 카드에서 검토 완료를 눌러야 보냅니다.');
   $('#rule').textContent = st.score_rule;
   $('#range').textContent = st.data_from ? `수집된 데이터: ${fmt(st.data_from)} 이후 (최근 7일)` : '';
-  $('#reports').innerHTML = st.reports.length ? st.reports.map(r => reportHTML(r, r.slot.startsWith('auto') ? '예약 발송' : r.slot.startsWith('batch') ? '지난 리포트' : '기간 지정')).join('') : '<div class="empty">아직 만든 리포트가 없습니다.</div>';
+  document.querySelectorAll('.rep').forEach(d => d.open ? OPEN.add(d.dataset.slot) : OPEN.delete(d.dataset.slot));
+  document.querySelectorAll('.sec').forEach(d => SEC[d.dataset.k] = d.open);
+  // 기간 순서대로 (오래된 것 → 최근)
+  REPORTS = st.reports.sort((a, b) => a.start.localeCompare(b.start) || a.created.localeCompare(b.created));
+  const items = REPORTS.map((r, i) => ({r, i}));
+  const pending = items.filter(x => !x.r.sent), shared = items.filter(x => x.r.sent);
+  const sec = (k, title, note, list, hot) => `<details class="sec" data-k="${k}" ${(SEC[k] ?? hot) ? 'open' : ''}>
+    <summary>${title}<span class="cnt ${hot && list.length ? 'hot' : ''}">${list.length}건</span><small>${note}</small></summary>
+    <div class="sec-b">${list.map(x => reportHTML(x.r, labelOf(x.r), x.i)).join('') || '<div class="empty">없습니다.</div>'}</div></details>`;
+  $('#reports').innerHTML = sec('pending', '공유 안 된 동향', '검토 대기·발송 대기 · 눌러서 검토·수정', pending, pending.length > 0)
+    + sec('shared', '공유된 동향', 'Slack으로 보낸 리포트', shared, false) + SHOTS_HTML;
 }
 
-async function makeRange(send){
-  const btn = send ? $('#sendBtn') : $('#previewBtn'); btn.disabled = true; $('#msg').textContent = 'AI가 글을 묶고 코드가 중요도를 계산하는 중…';
+async function makeRange(){
+  const btn = $('#previewBtn'), send = false; btn.disabled = true; $('#msg').textContent = 'AI가 글을 분류하고 코드가 중요도를 계산하는 중… (30~40초)';
   try {
     const res = await fetch('api/report', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({start: $('#from').value, end: $('#to').value, send, key: key()})});
     const r = await res.json();
     if (!res.ok) throw new Error(r.detail || '만들지 못했습니다.');
-    $('#msg').textContent = send ? 'Slack으로 보냈습니다.' : '';
-    $('#reports').insertAdjacentHTML('afterbegin', reportHTML(r, '방금 만든 리포트'));
+    $('#msg').textContent = '만들었습니다. 아래 "공유 안 된 동향"에서 검토·수정할 수 있습니다.';
+    OPEN.add(r.slot); SEC.pending = true;
+    await load();
   } catch (e) { $('#msg').textContent = e.message; }
   btn.disabled = false;
 }
-$('#previewBtn').onclick = () => makeRange(false);
-$('#sendBtn').onclick = () => makeRange(true);
+$('#previewBtn').onclick = () => makeRange();
 $('#saveBtn').onclick = async () => {
   const days = [...document.querySelectorAll('#days input:checked')].map(x => +x.value);
   const res = await fetch('api/settings', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({key: key(), time: $('#time').value, weekdays: days, webhook: $('#hook').value, enabled: true})});
+    body: JSON.stringify({key: key(), time: $('#time').value, weekdays: days, webhook: $('#hook').value, enabled: true, auto_send: $('#auto').checked})});
   $('#msg').textContent = res.ok ? '설정을 저장했습니다.' : ((await res.json()).detail || '저장하지 못했습니다.');
   $('#hook').value = ''; load();
 };
 const now = new Date(); $('#to').value = local(now); $('#from').value = local(new Date(now - 86400000));
-load();
+loadShots().then(load);
 </script>
 </body>
 </html>
