@@ -31,11 +31,13 @@ def _text(s):
     return html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", s))).strip()
 
 
-def collect_dc(since, max_pages=30, delay=1.0, start_page=1):
+def collect_dc(since, max_pages=30, delay=1.2, start_page=1):
     """since 이후 글을 목록 페이지에서 가져온다 (공지 제외). 제목·조회·추천·댓글·시각만 저장."""
     posts = []
     for page in range(start_page, start_page + max_pages):
         s = _get(f"https://gall.dcinside.com/mgallery/board/lists/?id={DC_GALLERY}&page={page}")
+        if not s:
+            raise BlockedError("디시 목록이 빈 응답입니다 (접근 제한 가능성)")
         rows = re.findall(r'<tr class="ub-content us-post"[^>]*data-no="(\d+)"[^>]*data-type="([^"]+)"(.*?)</tr>', s, re.S)
         oldest = None
         for no, typ, body in rows:
@@ -62,6 +64,10 @@ def collect_dc(since, max_pages=30, delay=1.0, start_page=1):
             break
         time.sleep(delay)
     return posts
+
+
+class BlockedError(RuntimeError):
+    """사이트가 빈 응답을 줄 때 (일시적 접근 제한)"""
 
 
 KO_DATE = re.compile(r"(?:(\d{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일")
@@ -131,6 +137,8 @@ def fetch_dc_detail(post_id, max_comments=20):
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), urllib.request.HTTPSHandler(context=_CTX))
     s = opener.open(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=20).read().decode("utf-8", errors="ignore")
+    if not s:
+        return None  # 빈 응답: 접근 제한 중
     i = s.find('<div class="write_div"')
     seg = s[i:i + 8000] if i >= 0 else ""
     if '<div class="btn_recommend_box' in seg:

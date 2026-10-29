@@ -30,6 +30,12 @@ def build(start, end, stats, topics, page_url=""):
             + (f" · 심각 키워드 글 {t['severe']}개" if t['severe'] else "") + (f" · 스팀 비추천 {t['steam_down']}" if t['steam_down'] else "")
             + (f" · 본문·댓글 확인 {t['confirmed']}/{t['checked']}" if t.get('checked') else "")
             + f" → 점수 {t['score']}\n> {ex}"}})
+    if topics and all(t.get("verify") == "skipped" for t in topics):
+        blocks.insert(2, {"type": "context", "elements": [{"type": "mrkdwn", "text":
+            "⚠ 커뮤니티 사이트 접근 제한으로 본문·댓글 확인을 생략했습니다. 제목 기준 결과이니 원문을 함께 확인해 주세요."}]})
+    if not topics:
+        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text":
+            "검증된 주요 이슈가 없습니다. (본문·댓글까지 확인했을 때 조치가 필요한 주제가 2건 이상 확인되지 않음)"}})
     blocks.append({"type": "divider"})
     blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text":
         "●●●●● 긴급(서버·접속·결제 등 장애성 글이 있을 때만) · ●●●●○ 높음 · ●●●○○ 보통 · ●●○○○ 낮음 · ●○○○○ 참고  |  점수는 코드가 계산하고, 상위 글은 본문·댓글까지 열어 주제에 맞는지 다시 확인합니다."

@@ -34,7 +34,7 @@ SYSTEM = """당신은 게임 개발팀 PM을 돕는 보조입니다. 이터널 �
 - 다룰 주제: 실험체·아이템 밸런스, 버그·서버·클라이언트 문제, 매칭·랭크, 정지·제재·핵 신고 같은 운영 이슈, 이벤트·콘텐츠, 상점·결제·BM, 신규 유저·UI 불편.
 - 제외할 글: 특정 개인(유저·스트리머·직원 등)에 대한 이야기, 친목·잡담·밈·대회 응원, 의미를 알 수 없는 글. 개인 이름은 주제 이름에 절대 넣지 마세요.
 - 한 주제는 하나의 구체적인 대상(특정 실험체·아이템·시스템·버그·이벤트)에 대한 반응이어야 합니다. "UI 불편 전반"처럼 넓게 묶지 마세요.
-- 주제는 8~14개로 만들고, 글이 1개뿐인 주제는 만들지 마세요.
+- 주제는 10~16개로 만들고, 글이 1개뿐인 주제는 만들지 마세요.
 - 주제 이름에는 대상의 실제 이름(실험체·아이템·시스템·이벤트 이름)을 꼭 넣으세요. "특정", "일부", "게임 내" 같은 막연한 말은 쓰지 말고, 대상을 알 수 없으면 그 주제를 만들지 마세요.
 - 주제 이름은 "무엇에 대해 어떤 반응인지" 구체적으로 쓰세요. 예: "코렐 스킬셋이 과하다는 불만", "랭크 매칭 대기 시간 증가 불만". "~관련 논의"처럼 막연하게 쓰지 마세요.
 - ids에는 목록에 있는 글 번호만 쓰세요. 지어내지 마세요.
@@ -59,7 +59,7 @@ def _engagement(p):
     return p["views"] / 50 + p["comments"] * 2 + p["recommends"] * 3
 
 
-def pick(posts, limit=320):
+def pick(posts, limit=480):
     """AI에 보낼 글 고르기: 반응이 큰 글과 심각 키워드 글 우선."""
     scored = sorted(posts, key=lambda p: (bool(SEVERE.search(p["title"] + p["text"])), _engagement(p)), reverse=True)
     return scored[:limit]
@@ -115,10 +115,10 @@ def score_topics(topics, posts):
         # 주제 이름의 핵심 단어가 제목·본문에 실제로 있는 글만 센다 (AI가 관계없는 글을 섞는 경우를 걸러냄)
         keys = [w for w in re.split(r"[\s·,/()]+", t["title"]) if w and w not in STOP]
         if keys:
-            # 이슈 단어(버그·핑·정지 등)가 주제 이름에 있으면 그 단어는 꼭 있어야 하고, 나머지 단어는 하나 이상
+            # 이슈 단어(버그·핑·정지 등)가 주제 이름에 있으면 그중 하나는 꼭 있어야 하고, 나머지 단어도 하나 이상
             must = [k for k in keys if k in ISSUE_WORDS]
             others = [k for k in keys if k not in ISSUE_WORDS]
-            ok = lambda txt: all(k in txt for k in must) and (not others or any(k in txt for k in others))
+            ok = lambda txt: (not must or any(k in txt for k in must)) and (not others or any(k in txt for k in others))
             ids = [i for i in ids if ok(by_id[i]["title"] + by_id[i]["text"])]
         used.update(ids)
         if len(ids) < 2:
@@ -180,17 +180,18 @@ VERIFY_SYSTEM = """당신은 커뮤니티 글이 주어진 주제에 정말 해�
   주제가 '버그'면 실제 오작동 제보여야 하고, '너프/버프 요구'면 실제로 조정을 요구해야 합니다.
 - '핑'은 네트워크 지연(핑 수치, 렉, 끊김)과 게임 안의 신호(핑 찍기)를 구분하세요. 주제와 다른 뜻이면 N입니다.
 - 반어·농담·칭찬(예: 잘한 플레이를 보고 '핵 같다'), 다른 게임 이야기, 주제와 관계없는 잡담이면 N입니다.
-- 애매하면 N으로 판정하세요.
+- 본문이 거의 없고 사진·영상 위주인 글은 영상을 볼 수 없으므로, 제목과 댓글로 주제가 분명할 때만 Y입니다.
+- 제목·본문·댓글로 주제에 해당한다고 볼 근거가 있으면 Y로 판정하세요.
 각 글마다 한 줄로만 답하세요: 번호 | Y 또는 N | 이유(10자 이내)"""
 VLINE = re.compile(r"^\s*(\d+)\s*\|\s*([YN])\s*\|?\s*(.*)$")
 
 
-def verify(topics, posts, fetch, per_topic=6, top_n=10, delay=0.4):
+def verify(topics, posts, fetch, per_topic=4, top_n=8, delay=1.0):
     """상위 주제마다 반응 큰 글 몇 개의 본문·댓글을 가져와 AI가 해당 여부를 판정한다.
     해당 비율만큼 점수를 조정하고, 해당 글이 2개 미만이면 주제를 뺀다. fetch(post) → {body, media, comments}."""
     import time as _t
     by_id = {p["id"]: p for p in posts}
-    checks, lines, n = [], [], 0
+    checks, lines, n, media_only, failed = [], [], 0, set(), 0
     for ti, t in enumerate(topics[:top_n]):
         for pid in t["ids"][:per_topic]:
             p = by_id[pid]
@@ -198,12 +199,21 @@ def verify(topics, posts, fetch, per_topic=6, top_n=10, delay=0.4):
                 try:
                     d = fetch(p)
                 except Exception:
+                    d = None
+                if d is None:
+                    failed += 1
+                    if failed >= 3:  # 접근 제한으로 보이면 검증을 건너뛰고 키워드 결과를 그대로 쓴다
+                        for t2 in topics:
+                            t2["verify"] = "skipped"
+                        return topics
                     d = {"body": "", "media": 0, "comments": []}
                 _t.sleep(delay)
             else:
                 d = {"body": p["text"], "media": 0, "comments": []}
             n += 1
             checks.append((n, ti, pid))
+            if len(d["body"]) < 10 and d["media"]:
+                media_only.add(pid)
             lines.append(f"{n} | 주제: {t['title']} | 제목: {p['title'][:60]} | 본문: {d['body'][:200] or '(없음)'}"
                          f"{' | 사진·영상 ' + str(d['media']) + '개' if d['media'] else ''} | 댓글: {' / '.join(d['comments'][:8])[:300] or '(없음)'}")
     if not lines:
@@ -228,6 +238,8 @@ def verify(topics, posts, fetch, per_topic=6, top_n=10, delay=0.4):
             continue
         ratio = len(yes) / len(mine)
         t["score"] = round(t["score"] * ratio, 1)
-        t["examples"] = [{"title": by_id[i]["title"][:60], "url": by_id[i]["url"]} for i in yes[:2]]
+        # 근거 링크는 글로 내용을 확인할 수 있는 것 우선 (영상·사진만 있는 글은 뒤로)
+        ordered = [i for i in yes if i not in media_only] + [i for i in yes if i in media_only]
+        t["examples"] = [{"title": by_id[i]["title"][:60], "url": by_id[i]["url"]} for i in ordered[:2]]
         kept.append(t)
     return kept

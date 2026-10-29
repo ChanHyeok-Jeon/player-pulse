@@ -87,7 +87,12 @@ def send_report(rep):
 # ── 백그라운드: 매시간 수집, 예약 시각 발송 ───────────────────────
 def collect_once(hours_back=3):
     since = datetime.now(KST) - timedelta(hours=hours_back)
-    n = store.save(collect_dc(since, max_pages=40)) + store.save(collect_steam(since, max_pages=3))
+    n = 0
+    for name, job in (("디시", lambda: collect_dc(since, max_pages=40)), ("스팀", lambda: collect_steam(since, max_pages=3))):
+        try:
+            n += store.save(job())
+        except Exception as e:  # 한 곳이 막혀도 나머지 수집과 발송은 계속한다
+            print(f"[collect] {name} 실패: {e}", flush=True)
     store.prune(datetime.now(KST) - timedelta(days=KEEP_DAYS + 1))
     return n
 
