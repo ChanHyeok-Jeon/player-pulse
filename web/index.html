@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>유저 동향 아침 브리핑</title>
+<meta name="description" content="커뮤니티 반응을 매일 아침 중요도 순으로 Slack에 보내는 자동화. 중요도는 코드가 근거와 함께 계산합니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--a:61,214,195;--accent:rgb(var(--a));--on:#06201D;--bg:#0A0A0A;--c1:#141414;--c2:#1C1C1C;--line:rgba(255,255,255,.08);--t2:rgba(255,255,255,.66);--t3:rgba(255,255,255,.42);--warn:#F2A65A;--bad:#F06A6A}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',sans-serif;background:var(--bg);color:#fff;line-height:1.6;word-break:keep-all;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.top{padding:2.2rem 0 1.4rem;border-bottom:1px solid var(--line)}
+.back{font-size:13px;color:var(--t3);text-decoration:none}
+h1{font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.03em;margin:.5rem 0 .5rem}
+.lead{color:var(--t2);font-size:15px;max-width:780px}
+.lead b{color:#fff}
+.flow{display:flex;flex-wrap:wrap;gap:6px;margin-top:.9rem;font-size:12.5px}
+.flow span{border:1px solid var(--line);padding:4px 10px;border-radius:20px;color:var(--t2)}
+.flow span.ai{background:rgba(var(--a),.14);border-color:rgba(var(--a),.4);color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1.4rem 0}
+.card{background:var(--c1);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem}
+.card h3{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.04em;margin-bottom:.7rem}
+label{font-size:12px;color:var(--t3);display:block;margin:.5rem 0 .25rem}
+input{font:inherit;font-size:14px;background:var(--c2);border:1px solid var(--line);color:#fff;border-radius:8px;padding:.45rem .6rem;color-scheme:dark}
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days label{display:flex;align-items:center;gap:4px;margin:0;font-size:13px;color:var(--t2);background:var(--c2);border:1px solid var(--line);border-radius:8px;padding:.3rem .6rem;cursor:pointer}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:.8rem}
+.btn{font:inherit;font-size:13.5px;font-weight:700;border:none;border-radius:8px;padding:.55rem 1rem;cursor:pointer;background:var(--accent);color:var(--on)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--t2);font-weight:600}
+.btn:disabled{opacity:.5;cursor:wait}
+.status{font-size:13px;color:var(--t2);margin-top:.5rem}
+.status b{color:var(--accent)}
+.rule{font-size:13px;color:var(--t2);line-height:1.75}
+.rule code{font-family:inherit;color:#fff}
+.msg{font-size:13px;margin-top:.6rem;color:var(--warn)}
+.rep{background:#1A1D21;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:1rem 1.1rem;margin-bottom:12px}
+.rep-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.3rem}
+.rep-h b{font-size:15px}
+.rep-h span{font-size:12px;color:var(--t3)}
+.rep-s{font-size:12.5px;color:var(--t2);margin-bottom:.6rem}
+.tp{padding:.55rem 0;border-top:1px solid var(--line)}
+.tp .d{font-family:ui-monospace,Menlo,monospace;color:var(--accent);margin-right:8px;letter-spacing:1px}
+.tp .d.l5,.tp .d.l4{color:var(--bad)}.tp .d.l3{color:var(--warn)}
+.tp b{font-size:14px}
+.tp .meta{font-size:12px;color:var(--t3);margin-left:4px}
+.tp .why{font-size:12.5px;color:var(--t2);margin-top:2px}
+.tp .ex{font-size:12px;color:var(--t3);margin-top:2px}
+.tp .ex a{color:var(--t2)}
+.empty{color:var(--t3);text-align:center;padding:2rem;font-size:14px}
+footer{font-size:12px;color:var(--t3);padding:1.2rem 0 2.5rem}
+@media(max-width:860px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="/">← 전찬혁 포트폴리오</a>
+    <h1>유저 동향 아침 브리핑</h1>
+    <p class="lead">게임사 인턴 때 커뮤니티 동향 파악 과제에 <b>약 2시간</b>이 걸렸고, 현업 담당자도 매일 아침 <b>20~30분</b>을 들여 정리해 공유한다고 들었습니다. 이 시간을 줄이려고 만들었습니다. 매시간 공개 커뮤니티 글을 모으고, 정해진 시각에 <b>중요도 순 동향을 Slack 전체 채널로</b> 보냅니다. 월요일에는 금요일 아침 이후 주말 동향을 한 번에 보냅니다.</p>
+    <div class="flow"><span>매시간 수집 (디시 갤러리 · 스팀 리뷰)</span><span class="ai">AI: 비슷한 글 묶기</span><span>코드: 근거 집계·중요도 계산</span><span>Slack 발송 (요일·시각 설정)</span><span>각 부서가 자기 주제 확인</span></div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>발송 설정</h3>
+      <label>보내는 시각 (한국 시간)</label><input type="time" id="time" value="09:00">
+      <label>보내는 요일</label>
+      <div class="days" id="days"></div>
+      <div class="status" id="status">불러오는 중…</div>
+      <label>관리자 키 (설정 저장·Slack 발송용)</label><input type="password" id="key" placeholder="관리자만 입력" style="width:100%">
+      <label>Slack Webhook (바꿀 때만)</label><input id="hook" placeholder="https://hooks.slack.com/services/..." style="width:100%">
+      <div class="btns"><button class="btn ghost" id="saveBtn">설정 저장</button></div>
+    </div>
+    <div class="card">
+      <h3>기간을 정해서 동향 받기</h3>
+      <label>시작</label><input type="datetime-local" id="from">
+      <label>끝</label><input type="datetime-local" id="to">
+      <div class="btns"><button class="btn" id="previewBtn">동향 만들기</button><button class="btn ghost" id="sendBtn">Slack으로 보내기 (관리자)</button></div>
+      <div class="status" id="range"></div>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.2rem"><h3>중요도는 이렇게 정합니다</h3><div class="rule" id="rule"></div></div>
+
+  <div id="reports"><div class="empty">리포트를 불러오는 중…</div></div>
+  <footer>공개 게시판의 목록 정보(제목·조회·댓글·추천·시각)와 스팀 리뷰 앞부분만 모으고 작성자 정보는 저장하지 않습니다. 최근 7일만 보관합니다. 소스: <a href="https://github.com/ChanHyeok-Jeon/player-pulse" target="_blank" rel="noopener">GitHub</a></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const W = '월화수목금토일';
+const dots = l => '●'.repeat(l) + '○'.repeat(5 - l);
+const LV = {5:'긴급', 4:'높음', 3:'보통', 2:'낮음', 1:'참고'};
+const fmt = iso => { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()}(${W[(d.getDay()+6)%7]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const local = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+const key = () => $('#key').value || new URLSearchParams(location.search).get('key') || '';
+
+function topicHTML(t){
+  const p = t.parts || {};
+  const why = `글 ${t.count}개 · 조회 ${t.views.toLocaleString()} · 댓글 ${t.comments} · 추천 ${t.recommends ?? 0}` + (t.severe ? ` · 심각 키워드 글 ${t.severe}개` : '') + (t.steam_down ? ` · 스팀 비추천 ${t.steam_down}` : '');
+  const parts = Object.entries(p).map(([k,v]) => `${k} ${v}`).join(' + ');
+  return `<div class="tp"><span class="d l${t.level}">${dots(t.level)}</span><b>${esc(t.title)}</b><span class="meta">${esc(t.dept)} · ${esc(t.sentiment)} · ${LV[t.level]}</span>
+    <div class="why">근거: ${why} → 점수 ${t.score} <span style="color:var(--t3)">(${esc(parts)})</span></div>
+    <div class="ex">${t.examples.map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>`).join(' · ')}</div></div>`;
+}
+function reportHTML(r, label){
+  const days = (new Date(r.end) - new Date(r.start)) / 86400000;
+  const s = r.stats, neg = s.steam ? ` · 스팀 리뷰 부정 ${Math.round(100*s.steam_neg/s.steam)}%` : '';
+  return `<div class="rep"><div class="rep-h"><b>📋 이터널 리턴 유저 동향 · ${days >= 2 ? '주말 동향' : '금일 반응'}</b><span>${label || ''}${r.sent ? ' · Slack 발송 ' + fmt(r.sent) : ''}</span></div>
+    <div class="rep-s"><b>${fmt(r.start)} ~ ${fmt(r.end)}</b> · 수집 ${s.total}건 (디시 ${s.dc} · 스팀 ${s.steam})${neg} · 정리에 걸린 시간 ${r.seconds}초</div>
+    ${r.topics.slice(0, 10).map(topicHTML).join('')}</div>`;
+}
+
+async function load(){
+  const st = await (await fetch('api/state')).json();
+  const s = st.settings;
+  $('#time').value = s.time;
+  $('#days').innerHTML = [...W].map((d, i) => `<label><input type="checkbox" value="${i}" ${s.weekdays.includes(i) ? 'checked' : ''}>${d}</label>`).join('');
+  $('#status').innerHTML = s.webhook_set ? `Slack 연결됨 · 매주 <b>${s.weekdays.map(i => W[i]).join('·')}</b> <b>${s.time}</b>에 발송` : 'Slack Webhook이 아직 연결되지 않았습니다.';
+  $('#rule').textContent = st.score_rule;
+  $('#range').textContent = st.data_from ? `수집된 데이터: ${fmt(st.data_from)} 이후 (최근 7일)` : '';
+  $('#reports').innerHTML = st.reports.length ? st.reports.map(r => reportHTML(r, r.slot.startsWith('auto') ? '예약 발송' : r.slot.startsWith('batch') ? '지난 리포트' : '기간 지정')).join('') : '<div class="empty">아직 만든 리포트가 없습니다.</div>';
+}
+
+async function makeRange(send){
+  const btn = send ? $('#sendBtn') : $('#previewBtn'); btn.disabled = true; $('#msg').textContent = 'AI가 글을 묶고 코드가 중요도를 계산하는 중…';
+  try {
+    const res = await fetch('api/report', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({start: $('#from').value, end: $('#to').value, send, key: key()})});
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.detail || '만들지 못했습니다.');
+    $('#msg').textContent = send ? 'Slack으로 보냈습니다.' : '';
+    $('#reports').insertAdjacentHTML('afterbegin', reportHTML(r, '방금 만든 리포트'));
+  } catch (e) { $('#msg').textContent = e.message; }
+  btn.disabled = false;
+}
+$('#previewBtn').onclick = () => makeRange(false);
+$('#sendBtn').onclick = () => makeRange(true);
+$('#saveBtn').onclick = async () => {
+  const days = [...document.querySelectorAll('#days input:checked')].map(x => +x.value);
+  const res = await fetch('api/settings', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({key: key(), time: $('#time').value, weekdays: days, webhook: $('#hook').value, enabled: true})});
+  $('#msg').textContent = res.ok ? '설정을 저장했습니다.' : ((await res.json()).detail || '저장하지 못했습니다.');
+  $('#hook').value = ''; load();
+};
+const now = new Date(); $('#to').value = local(now); $('#from').value = local(new Date(now - 86400000));
+load();
+</script>
+</body>
+</html>
