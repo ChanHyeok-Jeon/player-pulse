@@ -28,7 +28,24 @@ OUTAGE = re.compile(r"서버\s*(?:다운|터|폭파|죽|마비|불안)|접속\s*
                     r"데이터\s*(?:날아|증발|초기화)|점검\s*연장|긴급\s*점검|접속\s*장애")
 CRUDE = re.compile(r"씨\s*발|시발|ㅅㅂ|ㅆㅂ|좆|졷|존나|ㅈㄴ|병신|ㅄ|새끼|개빡|빡통|ㅈ버그|응아|븅신")  # 근거 링크로는 욕설 없는 글을 먼저 보여 준다
 SITE = re.compile(r"디시|공앱|갤러리|갤에|주딱|념글|개념글|글삭|차단당")  # 커뮤니티 사이트 자체 이야기는 게임 이슈가 아니다
-GAME = {"-", "이리", "이터리", "이터널리턴", "이터널 리턴", "겜", "게임", "스팀", "이 게임"}
+# 게임별로 바뀌는 말 (PULSE_GAME). 기본은 이터널 리턴
+PROFILES = {
+    "er": {"name": "이터널 리턴", "team": "개발팀", "unit": "실험체·아이템", "target_kind": "실험체·아이템·시스템·모드",
+           "target_ex": "알렉스, 레니, 코발트, 랭크, 상점",
+           "name_ex": '"실험체 알렉스 무기 슬롯이 자동으로 바뀌는 불편", "랭크 매칭 대기 시간 증가 불만", "KT 회선 핑 튐 불만"',
+           "aliases": {"-", "이리", "이터리", "이터널리턴", "이터널 리턴", "겜", "게임", "스팀", "이 게임"},
+           "notes": "- 본인이 정지당한 이유를 묻거나 하소연하는 글은 운영이 아니라 질문입니다. 게임 안 신호(핑 찍기) 이야기는 잡담입니다.\n"
+                    "- 스킬로 적을 튕겨 내는 기술 이야기는 장애가 아닙니다."},
+    "bdm": {"name": "검은사막 모바일", "team": "사업·운영팀", "unit": "클래스·장비", "target_kind": "클래스·장비·콘텐츠·시스템",
+            "target_ex": "세라핌, 초령, 의형제, 강화, 펄 상점, 길드",
+            "name_ex": '"클래스 세라핌 스킬 판정 버그 제보", "펄 상점 신규 패키지 가격 불만", "점검 연장 후 접속 지연 불만"',
+            "aliases": {"-", "검사모", "검모", "검사", "검은사막", "검은사막 모바일", "겜", "게임", "이 게임"},
+            "notes": "- 본인 계정이 정지된 이유를 묻거나 하소연하는 글은 운영이 아니라 질문입니다.\n"
+                     "- 강화·뽑기 결과를 자랑하거나 한탄만 하는 글은 잡담입니다. 확률이나 가격 구조 자체를 문제 삼으면 BM입니다."},
+}
+PROFILE = PROFILES[os.environ.get("PULSE_GAME", "er")]
+GAME = PROFILE["aliases"]
+PREFIX = re.compile(r"^(?:실험체|아이템|시스템|모드|클래스|장비|콘텐츠|이벤트)\s*")
 ISSUE_WORDS = {"버그", "핑", "렉", "정지", "제재", "매칭", "튕김", "서버", "결제", "환불", "핵", "로딩", "프레임", "랭크"}
 STOP = {"제보", "증상", "현상", "발생", "불만", "요구", "요청", "문제", "관련", "논의", "신고", "불편", "이슈", "반응", "의견", "및", "대한", "많음", "증가", "호평", "비판", "질문", "개선"}
 VAGUE = re.compile(r"특정|일부 |게임 내 |기타|잡담|밈|팁|공략|가이드|빌드 추천|질문 모음")
@@ -59,20 +76,20 @@ def pick(posts, limit=600):
     return scored[:limit]
 
 
-CLASSIFY = """당신은 이터널 리턴 개발팀 PM을 돕는 보조입니다. 커뮤니티 글 제목을 하나씩 읽고 성격을 분류하세요.
+CLASSIFY = f"""당신은 {PROFILE['name']} {PROFILE['team']} PM을 돕는 보조입니다. 커뮤니티 글 제목을 하나씩 읽고 성격을 분류하세요.
 종류 (하나만):
   장애: 서버 다운·접속 불가·튕김·결제 오류·계정 손실 / 버그: 게임이 의도와 다르게 동작한다는 제보 /
   네트워크: 핑·렉·끊김 같은 지연 문제 / 운영: 핵 방치·오탐 정지·제재 기준처럼 운영 조치가 필요한 내용 /
-  BM: 상점·가격·과금 / UX: 불편한 UI·조작·매칭 대기·신규 유저 진입 장벽 / 밸런스: 실험체·아이템이 세다·약하다며 조정을 요구 /
+  BM: 상점·가격·과금 / UX: 불편한 UI·조작·매칭 대기·신규 유저 진입 장벽 / 밸런스: {PROFILE['unit']}이 세다·약하다며 조정을 요구 /
   콘텐츠: 이벤트·패치·신규 콘텐츠에 대한 반응 / 질문: 공략·빌드·사용법·"이것도 정지임?" 같은 질문 / 잡담: 플레이 자랑·농담·감상·특정 개인 이야기
-- 본인이 정지당한 이유를 묻거나 하소연하는 글은 운영이 아니라 질문입니다. 게임 안 신호(핑 찍기) 이야기는 잡담입니다.
-- 스킬로 적을 튕겨 내는 기술 이야기는 장애가 아닙니다. 디시인사이드 앱·디시콘·갤러리 운영 이야기는 게임과 무관하므로 잡담입니다.
-- 대상: 제목에 실제로 쓰인 실험체·아이템·시스템·모드 이름 하나 (예: 알렉스, 레니, 코발트, 랭크, 상점). 없으면 -
+{PROFILE['notes']}
+- 디시인사이드 앱·디시콘·갤러리 운영 이야기는 게임과 무관하므로 잡담입니다.
+- 대상: 제목에 실제로 쓰인 {PROFILE['target_kind']} 이름 하나 (예: {PROFILE['target_ex']}). 없으면 -
 - 감정: 부정·긍정·중립
 - 요지: 무엇이 어떻다는 글인지 15자 이내. 욕설은 옮기지 마세요.
 각 글마다 한 줄로만 답하세요: 번호 | 종류 | 대상 | 감정 | 요지"""
-NAME = """각 묶음의 글 요지를 보고, 개발팀이 바로 알아볼 수 있는 주제 이름을 한 줄로 지으세요.
-- 대상 앞에 종류를 붙이세요 (예: "실험체 알렉스 무기 슬롯이 자동으로 바뀌는 불편", "랭크 매칭 대기 시간 증가 불만", "KT 회선 핑 튐 불만").
+NAME = f"""각 묶음의 글 요지를 보고, {PROFILE['team']}이 바로 알아볼 수 있는 주제 이름을 한 줄로 지으세요.
+- 대상 앞에 종류를 붙이세요 (예: {PROFILE['name_ex']}).
 - '특정', '일부', '관련 논의' 같은 막연한 말은 쓰지 말고, 욕설은 옮기지 마세요. 개인 이름은 넣지 마세요.
 각 묶음마다 한 줄로만 답하세요: 묶음 번호 | 주제 이름"""
 CLINE = re.compile(r"^\s*(\d+)\s*\|\s*(\S+)\s*\|\s*(.+?)\s*\|\s*(부정|긍정|중립)\s*\|\s*(.*)$")
@@ -88,22 +105,31 @@ def _ask(client, system, text, max_tokens=4000):
     return "".join(c.get("text", "") for c in res["output"]["message"]["content"])
 
 
-def classify(posts, batch=100):
-    """AI가 글마다 종류·대상·감정·요지를 붙인다. 한 번에 수백 개를 묶게 하면 모델이 큰 덩어리 하나로 뭉개서, 글 단위 분류로 바꿨다."""
+KIND_ALIAS = {"건의": "UX", "요청": "UX", "편의": "UX", "이벤트": "콘텐츠", "패치": "콘텐츠", "과금": "BM", "상점": "BM", "오류": "버그"}  # 목록에 없는 종류를 지어낼 때
+
+
+def classify(posts, batch=50):
+    """AI가 글마다 종류·대상·감정·요지를 붙인다. 한 번에 수백 개를 묶게 하면 모델이 큰 덩어리 하나로 뭉개서, 글 단위 분류로 바꿨다.
+    100개씩 보내면 답이 중간에 끊겨 뒤쪽 글이 분류되지 않아 50개로 줄였고, 빠진 글만 한 번 더 묻는다."""
     from concurrent.futures import ThreadPoolExecutor
     client = boto3.client("bedrock-runtime", region_name=os.environ.get("AWS_REGION", "ap-northeast-2"))
 
-    def run(k):
-        part = posts[k:k + batch]
+    def ask(part):
         text = "\n".join(f"{i + 1} | {p['title'][:70]}" for i, p in enumerate(part))
         got = {}
-        for _ in range(2):
-            for ln in _ask(client, CLASSIFY, text).splitlines():
-                m = CLINE.match(ln)
-                if m and 0 < int(m.group(1)) <= len(part):
-                    got[part[int(m.group(1)) - 1]["id"]] = {"kind": m.group(2), "target": m.group(3).strip(), "sentiment": m.group(4), "gist": m.group(5).strip()}
-            if len(got) >= len(part) * .7:
-                break
+        for ln in _ask(client, CLASSIFY, text).splitlines():
+            m = CLINE.match(ln)
+            if m and 0 < int(m.group(1)) <= len(part):
+                kind = KIND_ALIAS.get(m.group(2), m.group(2))
+                got[part[int(m.group(1)) - 1]["id"]] = {"kind": kind, "target": m.group(3).strip(), "sentiment": m.group(4), "gist": m.group(5).strip()}
+        return got
+
+    def run(k):
+        part = posts[k:k + batch]
+        got = ask(part)
+        missing = [p for p in part if p["id"] not in got]
+        if missing:
+            got.update(ask(missing))
         return got
 
     tags = {}
@@ -123,7 +149,7 @@ def cluster(posts):
         g = tags.get(p["id"])
         if not g or g["kind"] not in KIND_DEPT or SITE.search(p["title"]):
             continue  # 질문·잡담·분류 실패·사이트 이야기는 이슈가 아니다
-        target = re.sub(r"^(?:실험체|아이템|시스템|모드)\s*", "", g["target"]).strip() or "-"
+        target = PREFIX.sub("", g["target"]).strip() or "-"
         target = "-" if target in GAME else target  # '이리'(게임 줄임말)는 대상이 아니다
         groups.setdefault((g["kind"], target), []).append(p["id"])
     # 대상이 제각각인 버그·장애·네트워크 글, 대상이 없는 글은 종류별로 한데 모은다
@@ -188,7 +214,7 @@ def score_topics(topics, posts):
         t.setdefault("dept", "커뮤니티·기타")
         t.setdefault("sentiment", "혼재")
         t.setdefault("kind", "버그" if re.search(r"버그|오류", t["title"]) else "장애" if CRITICAL.search(t["title"]) else "밸런스")
-        target = re.sub(r"^(?:실험체|아이템|시스템|이벤트)\s*", "", (t.get("target") or "").strip())
+        target = PREFIX.sub("", (t.get("target") or "").strip())
         ids = [i for i in dict.fromkeys(t["ids"]) if i in by_id]
         dropped += len(t["ids"]) - len(ids)
         ids = [i for i in ids if i not in used]
@@ -258,27 +284,27 @@ def assign_levels(out):
 SCORE_RULE = ("중요도는 고정 기준입니다. ●●●●● 서버 다운·접속 불가·로그인 불가·결제 오류·계정 손실 같은 장애 글이 2시간 안에 3건 이상(여러 유저가 동시에 겪는 장애). "
               "●●●●○ 버그·장애 제보가 3건 이상 확인됨. ●●●○○ 버그 제보 1~2건, 운영·BM 요구 5건 이상, 같은 불만 8건 이상. "
               "●●○○○ 관련 글 3건 이상. ●○○○○ 그 외. 밸런스·의견은 아무리 많아도 ●●●○○까지, 긍정 반응은 ●●○○○까지. "
-              "질문·잡담·본인 정지 사유 문의는 이슈가 아니므로 뺍니다. 글은 대상 이름(실험체·아이템·시스템)이 실제로 들어간 것만 세고, "
+              f"질문·잡담·본인 정지 사유 문의는 이슈가 아니므로 뺍니다. 글은 대상 이름({PROFILE['target_kind']})이 실제로 들어간 것만 세고, "
               "AI가 글마다 주제에 정말 해당하는지 다시 판정해 해당 글이 2개 미만이면 주제를 뺍니다. "
               "같은 단계 안에서는 점수(글 수 + 반응×0.15 + 심각 키워드 글×2 + 부정이면 글 수×1.5 + 스팀 비추천×1.5) 순서입니다.")
 
 
 def summary_stats(posts):
     steam = [p for p in posts if p["vote"]]
-    return {"total": len(posts), "dc": sum(1 for p in posts if p["source"].startswith("디시")),
+    return {"total": len(posts), "dc": sum(1 for p in posts if not p["vote"]),
             "steam": len(steam), "steam_neg": sum(1 for p in steam if p["vote"] == "down")}
 
 
 
 
 # ── 본문·댓글로 주제 해당 여부 검증 ──────────────────────────
-VERIFY_SYSTEM = """당신은 커뮤니티 글이 주어진 주제에 정말 해당하는지 엄격하게 판정합니다. 제목만 보지 말고 본문과 댓글 분위기까지 보세요.
+VERIFY_SYSTEM = f"""당신은 커뮤니티 글이 주어진 주제에 정말 해당하는지 엄격하게 판정합니다. 제목만 보지 말고 본문과 댓글 분위기까지 보세요.
 - 대상과 반응이 모두 맞아야 Y입니다. 주제가 '불만'이면 글이 실제로 불만·비판이어야 하고, 단순 질문·팁·칭찬·잡담이면 N입니다.
   주제가 '버그'면 실제 오작동 제보여야 하고, '너프/버프 요구'면 실제로 조정을 요구해야 합니다.
 - '핑'은 네트워크 지연(핑 수치, 렉, 끊김)과 게임 안의 신호(핑 찍기)를 구분하세요. 주제와 다른 뜻이면 N입니다.
 - 반어·농담·칭찬(예: 잘한 플레이를 보고 '핵 같다'), 다른 게임 이야기, 주제와 관계없는 잡담이면 N입니다.
 - 본문이 거의 없고 사진·영상 위주인 글은 영상을 볼 수 없으므로, 제목과 댓글로 주제가 분명할 때만 Y입니다.
-- 주제의 대상(실험체·아이템·시스템)과 다른 대상 이야기면 N입니다.
+- 주제의 대상({PROFILE['target_kind']})과 다른 대상 이야기면 N입니다.
 - 공략·빌드·사용법 질문("할만함?", "무기 뭐 씀?"), 본인이 정지당한 이유를 묻거나 하소연하는 글은 N입니다.
 - 본문이 '(확인 못 함)'이면 제목만으로 판단하세요. 제목에 주제의 내용이 드러나면 Y, 애매하면 N입니다.
 - 제목·본문·댓글로 주제에 해당한다고 볼 근거가 있으면 Y로 판정하세요.
@@ -299,7 +325,7 @@ def verify(topics, posts, fetch, per_topic=8, top_n=12, delay=1.0, judge=None, f
         for j, pid in enumerate(t["ids"][:per_topic]):
             p = by_id[pid]
             d = None
-            if p["source"].startswith("디시") and failed < 3 and j < fetch_n:  # 사이트 부담을 줄이려 주제마다 앞의 몇 개만 연다
+            if not p["id"].startswith("st-") and failed < 3 and j < fetch_n:  # 사이트 부담을 줄이려 주제마다 앞의 몇 개만 연다
                 try:
                     d = fetch(p)
                 except Exception:
@@ -307,7 +333,7 @@ def verify(topics, posts, fetch, per_topic=8, top_n=12, delay=1.0, judge=None, f
                 if d is None:
                     failed += 1  # 3번 막히면 접근 제한으로 보고 더 요청하지 않는다
                 _t.sleep(delay)
-            elif not p["source"].startswith("디시"):
+            elif p["id"].startswith("st-"):  # 스팀 리뷰는 본문을 이미 갖고 있다
                 d = {"body": p["text"], "media": 0, "comments": []}
             if d is not None:
                 opened.add(ti)

@@ -1,6 +1,7 @@
 """공개 커뮤니티 수집. robots.txt가 허용한 공개 목록만, 낮은 빈도로 가져오고 작성자 정보는 저장하지 않는다."""
 import hashlib
 import html
+import os
 import re
 import ssl
 import time
@@ -10,8 +11,13 @@ from datetime import datetime, timedelta, timezone
 
 KST = timezone(timedelta(hours=9))
 UA = "Mozilla/5.0 (compatible; player-pulse/1.0; portfolio demo; +https://chanhyeok-pm.cloud/pulse/)"
-DC_GALLERY = "bser"  # 디시인사이드 이터널 리턴 마이너 갤러리
-STEAM_APP = "1049590"  # 이터널 리턴
+# 수집 대상 게임. 기본은 이터널 리턴(디시 갤러리 + 스팀 리뷰), PULSE_GAME=bdm이면 검은사막 모바일 공식 포럼
+GAME = os.environ.get("PULSE_GAME", "er")
+DC_GALLERY, DC_PATH, DC_TYPE, DC_SOURCE, STEAM_APP = "bser", "mgallery/board", "M", "디시 이터널리턴 갤러리", "1049590"
+FORUM = "https://forum.blackdesertm.com"
+FORUM_SOURCE = "검은사막 모바일 공식 포럼"
+FORUM_BOARDS = {12: "자유게시판", 16: "클래스 게시판", 84: "건의 및 제보"}  # 공지·이벤트·갤러리 게시판은 뺀다
+SOURCE = FORUM_SOURCE if GAME == "bdm" else DC_SOURCE
 
 
 try:
@@ -35,7 +41,7 @@ def collect_dc(since, max_pages=30, delay=1.2, start_page=1):
     """since 이후 글을 목록 페이지에서 가져온다 (공지 제외). 제목·조회·추천·댓글·시각만 저장."""
     posts = []
     for page in range(start_page, start_page + max_pages):
-        s = _get(f"https://gall.dcinside.com/mgallery/board/lists/?id={DC_GALLERY}&page={page}")
+        s = _get(f"https://gall.dcinside.com/{DC_PATH}/lists/?id={DC_GALLERY}&page={page}")
         if not s:
             raise BlockedError("디시 목록이 빈 응답입니다 (접근 제한 가능성)")
         rows = re.findall(r'<tr class="ub-content us-post"[^>]*data-no="(\d+)"[^>]*data-type="([^"]+)"(.*?)</tr>', s, re.S)
@@ -54,9 +60,9 @@ def collect_dc(since, max_pages=30, delay=1.2, start_page=1):
             num = lambda cls: int(re.sub(r"\D", "", (re.search(rf'class="{cls}">(.*?)</td>', body, re.S) or [None, "0"])[1]) or 0)
             reply = re.search(r'class="reply_num">\[(\d+)', body)
             posts.append({
-                "id": f"dc-{no}", "source": "디시 이터널리턴 갤러리",
+                "id": f"dc-{no}", "source": DC_SOURCE,
                 "title": _text(title.group(1)) if title else "", "text": "",
-                "url": f"https://gall.dcinside.com/mgallery/board/view/?id={DC_GALLERY}&no={no}",
+                "url": f"https://gall.dcinside.com/{DC_PATH}/view/?id={DC_GALLERY}&no={no}",
                 "created": created.isoformat(), "views": num("gall_count"), "recommends": num("gall_recommend"),
                 "comments": int(reply.group(1)) if reply else 0, "vote": None,
             })
@@ -64,6 +70,46 @@ def collect_dc(since, max_pages=30, delay=1.2, start_page=1):
             break
         time.sleep(delay)
     return posts
+
+
+def collect_forum(since, max_pages=15, delay=1.5):
+    """검은사막 모바일 공식 포럼 게시판별 목록 (상단 고정 공지 제외). 제목·조회·추천·댓글·시각만 저장."""
+    posts = []
+    for board, name in FORUM_BOARDS.items():
+        for page in range(1, max_pages + 1):
+            s = _get(f"{FORUM}/Board?boardNo={board}&pageNo={page}")
+            if not s:
+                raise BlockedError("포럼 목록이 빈 응답입니다")
+            oldest = None
+            for it in re.findall(r'<li class="text_list_item[^"]*"[^>]*>(.*?)</li>', s, re.S):
+                a = re.search(r'href="/Board/Detail\?boardNo=(\d+)&(?:amp;)?contentNo=(\d+)', it)
+                d = re.search(r'class="date only-pc" data-src="([^"]+)"', it)
+                if not a or not d or int(a.group(1)) != board:
+                    continue  # 모든 게시판 위에 붙는 전체공지
+                created = datetime.strptime(d.group(1), "%Y-%m-%d %H:%M").replace(tzinfo=KST)
+                oldest = created if oldest is None else min(oldest, created)
+                if created < since:
+                    continue
+                sub = re.search(r'class="subject">(.*?)</span>', it, re.S)
+                num = lambda pat: int((re.search(pat, it) or [None, "0"])[1])
+                posts.append({
+                    "id": f"fm-{board}-{a.group(2)}", "source": f"{FORUM_SOURCE} {name}",
+                    "title": _text(sub.group(1)) if sub else "", "text": "",
+                    "url": f"{FORUM}/Board/Detail?boardNo={board}&contentNo={a.group(2)}",
+                    "created": created.isoformat(), "views": num(r'class="view">(\d+)'), "recommends": num(r'class="like">(\d+)'),
+                    "comments": num(r'class="replyM only-m">\s*<b>(\d+)'), "vote": None,
+                })
+            time.sleep(delay)
+            if oldest is None or oldest < since:
+                break
+    return posts
+
+
+def collect(since, max_pages=40, delay=1.5):
+    """게임에 맞는 출처에서 모은다."""
+    if GAME == "bdm":
+        return collect_forum(since, max_pages=max_pages, delay=delay)
+    return collect_dc(since, max_pages=max_pages, delay=delay) + collect_steam(since, max_pages=3)
 
 
 class BlockedError(RuntimeError):
@@ -91,6 +137,8 @@ def _parse_date(text, now):
 
 def collect_steam(since, lang="koreana", max_pages=5, delay=1.0):
     """스팀 커뮤니티 최신 리뷰 (날짜 단위). 추천/비추천과 본문 앞부분만 저장, 프로필 주소는 해시로만."""
+    if not STEAM_APP:
+        return []  # 스팀에 없는 게임
     posts, now = [], datetime.now(KST)
     for page in range(1, max_pages + 1):
         url = (f"https://steamcommunity.com/app/{STEAM_APP}/homecontent/?userreviewsoffset={(page-1)*10}&p={page}"
@@ -133,7 +181,7 @@ AD_COMMENT = re.compile(r"…|\.\.\.|\"[^\"]{8,}\"|광고|구독|무료\s*나눔
 def fetch_dc_detail(post_id, max_comments=20):
     """디시 글의 본문 텍스트, 사진·영상 수, 댓글(광고·뉴스성 댓글 제외)을 가져온다."""
     no = post_id.split("-", 1)[1]
-    url = f"https://gall.dcinside.com/mgallery/board/view/?id={DC_GALLERY}&no={no}"
+    url = f"https://gall.dcinside.com/{DC_PATH}/view/?id={DC_GALLERY}&no={no}"
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), urllib.request.HTTPSHandler(context=_CTX))
     s = opener.open(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=20).read().decode("utf-8", errors="ignore")
@@ -150,7 +198,7 @@ def fetch_dc_detail(post_id, max_comments=20):
     m = re.search(r'name="e_s_n_o" value="([^"]+)"', s)
     if m:
         data = urllib.parse.urlencode({"id": DC_GALLERY, "no": no, "cmt_id": DC_GALLERY, "cmt_no": no, "e_s_n_o": m.group(1),
-                                       "comment_page": 1, "sort": "", "prevCnt": "", "board_type": "", "_GALLTYPE_": "M"}).encode()
+                                       "comment_page": 1, "sort": "", "prevCnt": "", "board_type": "", "_GALLTYPE_": DC_TYPE}).encode()
         req = urllib.request.Request("https://gall.dcinside.com/board/comment/", data=data,
                                      headers={"User-Agent": UA, "X-Requested-With": "XMLHttpRequest", "Referer": url})
         try:
@@ -161,3 +209,39 @@ def fetch_dc_detail(post_id, max_comments=20):
         except (ValueError, OSError):
             pass
     return {"body": body[:500], "media": media, "comments": comments[:max_comments]}
+
+
+def fetch_forum_detail(post_id, max_comments=20):
+    """포럼 글의 본문 텍스트, 사진·영상 수, 댓글 첫 페이지를 가져온다. 작성자·IP는 읽지 않는다."""
+    _, board, no = post_id.split("-", 2)
+    url = f"{FORUM}/Board/Detail?boardNo={board}&contentNo={no}"
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), urllib.request.HTTPSHandler(context=_CTX))
+    s = opener.open(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=20).read().decode("utf-8", errors="ignore")
+    if not s:
+        return None
+    i = s.find('<div class="contents_area')
+    seg = s[i:s.find('<div class="infoArea', i)] if i >= 0 else ""
+    media = len(re.findall(r"<img |<video|<iframe", seg))
+    body = _text(re.sub(r"<script.*?</script>", " ", seg, flags=re.S))
+    comments = []
+    j = s.find('id="frmCommentList"')
+    if j >= 0:
+        form = s[s.rfind("<form", 0, j):s.find("</form>", j)]
+        data = urllib.parse.urlencode(dict(re.findall(r'name="([^"]+)" type="hidden" value="([^"]*)"', form))).encode()
+        req = urllib.request.Request(f"{FORUM}/Board/CommentList", data=data,
+                                     headers={"User-Agent": UA, "X-Requested-With": "XMLHttpRequest", "Referer": url})
+        try:
+            views = _json.loads(opener.open(req, timeout=20).read().decode("utf-8", errors="ignore")).get("views") or ""
+            for c in re.findall(r'<div class="replyText"[^>]*>(.*?)</div>', views, re.S):
+                memo = _text(c)
+                if memo and not AD_COMMENT.search(memo) and len(memo) <= 120:
+                    comments.append(memo)
+        except (ValueError, OSError):
+            pass
+    return {"body": body[:500], "media": media, "comments": comments[:max_comments]}
+
+
+def fetch_detail(post):
+    """글 출처에 맞게 본문·댓글을 연다."""
+    return fetch_forum_detail(post["id"]) if post["id"].startswith("fm-") else fetch_dc_detail(post["id"])
